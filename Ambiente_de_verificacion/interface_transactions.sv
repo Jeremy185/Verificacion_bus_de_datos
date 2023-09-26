@@ -1,66 +1,60 @@
 `timescale 1ns / 1ps
 //`include "driver.sv"
 
-//////////////////////////////////////////////////////////////////////////////////
-// Company: 
-// Engineer: 
-// 
-// Create Date: 09/25/2023 08:45:21 AM
-// Design Name: 
-// Module Name: interface_transactions
-// Project Name: 
-// Target Devices: 
-// Tool Versions: 
-// Description: 
-// 
-// Dependencies: 
-// 
-// Revision:
-// Revision 0.01 - File Created
-// Additional Comments:
-// 
-//////////////////////////////////////////////////////////////////////////////////
 
-//Definicion de los tipos de transacciones
-//Transaccion: transacciones que salen y entran del bus de datos
-typedef enum {envio, scoreboard, reset} tipo_trans; 
+//Definicion de las posibles transacciones para el bus 
+typedef enum {envio, todos_envio, broadcast, reset} tipo_trans; 
 
 
 //Transaccione que entran y salen del DUT  (Creo que hay que meter esto en un array)
-class trans_bus #(parameter width = 16, depth = 8);
-    int                 max_retardo;
+class trans_bus #(parameter width = 16, drivers = 8);
+    int                 max_retardo;    //Retardo maximo por transaccion.
     rand int            retardo;        //Duracion de envio de cada dato
-    bit   [width - 1:0] paquete;        //Dato a enviar
-    rand int            transacciones;  //Cantidad de transacciones
-    int                 max_trans;      //Cantidad de transacciones maximas
-    int                 min_trans;      //Cantidad de transacciones minimas 
-    rand tipo_trans     tipo;           //envio, scoreboard, reset
+    logic [width - 1:0] paquete;        //Dato a enviar
+    rand tipo_trans     tipo;           //envio, broadcast, reset
+    int                 tiempo          //Representa el tiempo en el que se ejecuto una transaccion
+    rand int            driver;         //valor del driver a hacer la transaccion
     
-    constraint transac {min_trans <= transacciones; transacciones <= max_trans;}; //Cantidad de transacciones entre 100 y 200
-    constraint delay {retardo <= max_retardo;};    //Debe ser menor a un retardo maximo
+    //El paquete se divide en dos pedazos
+    rand logic [7:0] ID;
+    rand logic [7:0] ID_unknown;
+    rand logic [7:0] payload;  //payload
+
+    assign paquete = {ID,payload};  //Uniendo el broadcast con el paquete. Se puede ??
+
+    constraint id    {ID <= 8'd8; ID > 8'd0;}; //Limites del broadcast
+    constraint id_unk{id_unk > 8'd8;}; //Pone por fuera de los limites el ID
+    constraint delay {retardo <= max_retardo; retardo >= 0}; //Debe ser menor a un retardo maximo
+    constraint fifos {driver <= drivers; driver > 0;}; //Aqui se se necesta el numero de un driver aleatorio
+                                                       //Usar el driver especifico
     
-    
-    function new (int retardo, int max_retardo, bit [width - 1:0] paquete, int transacciones, int max_trans, int min_trans, tipo_trans tipo);  
+
+    function new (int retardo, int max_retardo, logic [7:0] id, logic [7:0] payload, logic [width - 1:0] paquete,  tipo_trans tipo, int tmp, int driver, logic [7:0] id_unk);  
         this.max_retardo = max_retardo;
-        this.retardo = retardo;
-        this.paquete = paquete;
-        this.transacciones = transacciones;
-        this.max_trans = max_trans;
-        this.min_trans = min_trans;
-        this.tipo      = tipo;
+        this.retardo     = retardo;
+        this.ID          = id;
+        this.payload     = payload;
+        this.tipo        = tipo;
+        this.tiempo      = tmp;
+        this.paquete     = paquete;
+        this.driver      = driver;
+        this.ID_unknown  = id_unk;
     endfunction
     
     function clean();
         this.max_retardo = 0;
-        this.retardo = 0;
-        this.paquete = 0;
-        this.transacciones = 0;
-        this.max_trans = 0;
-        this.min_trans = 0;
+        this.retardo     = 0;
+        this.ID          = 0;
+        this.payload     = 0;
+        this.tipo        = 0;
+        this.paquete     = 0;
+        this.tiempo      = 0;
+        this.driver      = 0;
+        this.ID_unknown  = 0;
     endfunction
     
     function void print(string tag = "");
-        $display("[%g] %s Retardo=%g Tipo=%s Paquete=%g transacciones=0x%h",$time,tag,this.retardo,this.tipo,this.paquet,this.transacciones);
+        $display("[%g] %s Retardo=%g Tipo=%s Paquete=%g tiempo= %g",$time,tag,this.retardo,this.tipo,this.paquete,this.tiempo);
     endfunction
 endclass
 
