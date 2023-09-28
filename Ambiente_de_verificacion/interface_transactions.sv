@@ -3,7 +3,7 @@
 
 
 //Definicion de las posibles transacciones para el bus 
-typedef enum {envio, todos_envio, broadcast, reset} tipo_trans; 
+typedef enum {envio, broadcast, reset} tipo_trans; 
 
 
 //Transaccione que entran y salen del DUT  (Creo que hay que meter esto en un array)
@@ -89,4 +89,3 @@ typedef enum {envio_aleatorio, broadcast_aleatorio, reset_half_sent, all_for_one
 typedef mailbox #(trans_bus) trans_bus_mbx;   //Comunica al driver con el agente y con el checker
 typedef mailbox #()agente_driver_mbx;  //Comunica al agente con el driver
 typedef mailbox #(instrucciones_agente)test_agente_mbx; //Comunica al test con el agente 
-
