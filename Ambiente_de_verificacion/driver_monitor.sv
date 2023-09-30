@@ -6,6 +6,7 @@ class monitor #(parameter width = 16, parameter depth = 8, parameter drivers = 4
     virtual FIFO #(.width(width)) fifo_out;
 
     bit [width-1:0] cola_out[$]; //Declaracion del queue del monitor que solo almacenas paquetes recibidos
+                                //Corregir
     int   id;   //El id propio de cada terminal en logic para poderlo comparar con los ID de los paquetes
 
 
@@ -87,12 +88,14 @@ class driver #(parameter width = 16, parameter depth = 8, parameter drivers = 4)
             end
 
             cola_in.push_back(transaccion); //Meto el dato dentro del queue
+            @(posedge fifo_in.clk);
 
             case(transaccion.tipo)
                 envio: begin
                     fifo_in.D_pop = cola_in.pop_front;
                     @(posedge fifo_in.clk);
                     fifo_in.pnding = 1;             //Ya el dut puede tomar el dato
+                    @(posedge fifo_in.clk);
                 end
             endcase
             @(posedge fifo_in.clk);
@@ -103,8 +106,16 @@ class driver #(parameter width = 16, parameter depth = 8, parameter drivers = 4)
 endclass
 
 class driver_monitor #(parameter width = 16, parameter depth = 8, parameter drivers = 4);
+    
+    //mailboxes
     trans_bus_mbx agente_driver;
     trans_bus_mbx agente_monitor;
+
+    //Interfaces
+    virtual FIFO #(.width(width)) fifo_out;
+    virtual FIFO #(.width(width)) fifo_in; 
+
+    //Componentes
     monitor #(.width(width), .depth(depth), .drivers(drivers)) inst_monitor;
     driver #(.width(width), .depth(depth), .drivers(drivers)) inst_driver;
     int id;
@@ -118,6 +129,10 @@ class driver_monitor #(parameter width = 16, parameter depth = 8, parameter driv
         //Conexion de los mailboxes
         inst_monitor.agente_monitor = agente_monitor;
         inst_driver.agente_driver = agente_driver;
+
+        //Conecto las interfaces
+        inst_monitor.fifo_out = fifo_out;
+        inst_driver.fifo_in = fifo_in;
     endfunction 
 
 

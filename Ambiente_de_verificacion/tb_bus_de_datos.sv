@@ -1,9 +1,8 @@
-`timescale 1ns / 1ps
 
 //include "driver_monitor.sv"
 
-class driver #(parameter width = 16, depth = 8);
-    trans_bus_mbx agente_driver;
+class driver #(parameter width = 16, parameter depth = 8);
+    //trans_bus_mbx agente_driver;
     int espera;                     //Variable que hace el retardo
     int id;                         //Valor del id
     function new(int terminal);
@@ -18,7 +17,7 @@ endclass
 
 
 module tb_bus_de_datos();
-    driver #(.width(), .depth()) driver_inst;
+    driver #(.width(16), .depth(8)) driver_inst;
 
     initial begin
         driver_inst = new (1);

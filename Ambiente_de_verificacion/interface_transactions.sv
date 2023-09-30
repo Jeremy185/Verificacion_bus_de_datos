@@ -1,24 +1,23 @@
-`timescale 1ns / 1ps
-//`include "driver.sv"
-
 
 //Definicion de las posibles transacciones para el bus 
 typedef enum {envio, broadcast, reset} tipo_trans; 
 
 
 //Transaccione que entran y salen del DUT  (Creo que hay que meter esto en un array)
+
 class trans_bus #(parameter width = 16, parameter max_drivers = 4);
     int                 max_retardo;    //Retardo maximo por transaccion.
     rand int            retardo;        //Duracion de envio de cada dato
-    logic [width - 1:0] paquete;        //Dato a enviar
+    bit [width - 1:0]   paquete;        //Dato a enviar
     rand tipo_trans     tipo;           //envio, broadcast, reset
     int                 tiempo          //Representa el tiempo en el que se ejecuto una transaccion
     rand int            driver;         //valor del driver a hacer la transaccion
+    int                 destino;        //Con este id ya podre mandar desde el agente directamente al destino
     
     //El paquete se divide en dos pedazos
-    rand logic [7:0] ID;
-    rand logic [7:0] ID_unknown;
-    rand logic [7:0] payload;  //payload
+    rand bit [7:0] ID;
+    rand bit [7:0] ID_unknown;
+    rand bit [7:0] payload;  //payload
 
     //assign paquete = {ID,payload};  //Uniendo el broadcast con el paquete. Se puede ??
 
@@ -29,7 +28,7 @@ class trans_bus #(parameter width = 16, parameter max_drivers = 4);
                                                        //Usar el driver especifico
     
 
-    function new (int retardo = 0, int max_retardo = 0, logic [7:0] id = '0, logic [7:0] payload = '0,  tipo_trans tipo = envio, int tmp = 0, int driver = 0, logic [7:0] id_unk = '0);  
+    function new (int retardo = 0, int max_retardo = 0, bit [7:0] id = '0, bit [7:0] payload = '0,  tipo_trans tipo = envio, int tmp = 0, int driver = 0, bit [7:0] id_unk = '0, );  
         this.max_retardo = max_retardo;
         this.retardo     = retardo;
         this.ID          = id;
@@ -39,22 +38,28 @@ class trans_bus #(parameter width = 16, parameter max_drivers = 4);
         this.paquete     = {ID, payload};
         this.driver      = driver;
         this.ID_unknown  = id_unk;
+        this.destino     = $bits(ID);  //Se le pone un atributo de destino a cada fifo de salida
     endfunction
     
     function clean();
         this.max_retardo = 0;
         this.retardo     = 0;
-        this.ID          = '0;
-        this.payload     = '0;
-        //this.tipo        = 0;
-        this.paquete     = '0;
+        this.ID          ='0;
+        this.payload     ='0;
+        this.tipo        = envio;
+        this.paquete     ='0;
         this.tiempo      = 0;
         this.driver      = 0;
-        this.ID_unknown  = '0;
+        this.ID_unknown  ='0;
+        this.destino     = 0;
     endfunction
     
-    function void print(string tag = "");
+    function void print_in(string tag = "");
         $display("[%g] %s Retardo=%g Tipo=%s Paquete=%g tiempo= %g FIFO_in = %d",$time,tag,this.retardo,this.tipo,this.paquete,this.tiempo, this.driver);
+    endfunction
+
+    function void print_out(string tag = "");
+        $display("[%g] %s Retardo=%g Tipo=%s Paquete=%g tiempo= %g FIFO_out = %d",$time,tag,this.retardo,this.tipo,this.paquete,this.tiempo, this.destino);
     endfunction
 endclass
 
