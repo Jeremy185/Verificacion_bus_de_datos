@@ -1,4 +1,3 @@
-
 `include "interface_transaction.sv"
 //Driver/monitor
 
@@ -17,9 +16,10 @@ class monitor #(parameter width = 16, parameter depth = 8, parameter drivers = 4
 
     task run();
         $display("[%g] La FIFO de salida %d fue inicializada",$time, id );
-      @(posedge fifo_out.clk);
+     	 @(posedge fifo_out.clk);
         fifo_out.rst = 1;
-      @(posedge fifo_out.clk);
+      	@(posedge fifo_out.clk);
+      
         forever begin
             trans_bus #(.width(width), .max_drivers(drivers)) transaccion;
           	fifo_out.rst = 0;
@@ -106,16 +106,9 @@ class driver #(parameter width = 16, parameter depth = 8, parameter drivers = 4)
 endclass
 
 
+
 class driver_monitor #(parameter width = 16, parameter depth = 8, parameter drivers = 4);
     
-    //mailboxes
-    trans_bus_mbx agente_driver;
-    trans_bus_mbx agente_monitor;
-
-    //Interfaces
-    virtual FIFO #(.width(width)) fifo_out;
-    virtual FIFO #(.width(width)) fifo_in; 
-
     //Componentes
     monitor #(.width(width), .depth(depth), .drivers(drivers)) inst_monitor;
     driver #(.width(width), .depth(depth), .drivers(drivers)) inst_driver;
@@ -126,19 +119,11 @@ class driver_monitor #(parameter width = 16, parameter depth = 8, parameter driv
         //instanciacion del driver y el monitor
         inst_driver = new(terminal);
         inst_monitor = new(terminal);
-
-        //Conexion de los mailboxes
-        inst_monitor.agente_monitor = agente_monitor;
-        inst_driver.agente_driver = agente_driver;
-
-        //Conecto las interfaces
-        inst_monitor.fifo_out = fifo_out;
-        inst_driver.fifo_in = fifo_in;
     endfunction 
 
 
     virtual task run();  //Aqui corro en paralelo el driver y el monitor (en el ambiente se corre en paralelo solo los drivers_monitores)
-        $display("[%g] El driver_monitor fue inicializado [%d]", $time, id)
+      	$display("[%g] El driver_monitor fue inicializado %d", $time, id);
         fork
             inst_monitor.run();
             inst_driver.run();
@@ -146,3 +131,4 @@ class driver_monitor #(parameter width = 16, parameter depth = 8, parameter driv
     endtask
     
 endclass
+

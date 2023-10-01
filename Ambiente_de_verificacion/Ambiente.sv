@@ -1,3 +1,5 @@
+`include "driver_monitor.sv"
+
 class ambiente #(parameter width = 16,  parameter depth = 8, parameter drivers = 4 );
 
     //Declaracion de los componentes del ambiente
@@ -13,7 +15,7 @@ class ambiente #(parameter width = 16,  parameter depth = 8, parameter drivers =
     function new();
 
         //Instanciacion de los mailboxes
-        for (int i = 0; i< drivers; i++)begin
+        for (int i = 0; i < drivers; i++)begin
             agente_monitor[i] = new();
             agente_driver[i] = new();
         end
@@ -25,32 +27,28 @@ class ambiente #(parameter width = 16,  parameter depth = 8, parameter drivers =
         end
 
         //Conexion de las interfaces y mailboxes en el ambiente
-        for (int i = 1; i<= drivers; i++) begin
+        for (int i = 1; i <= drivers; i++) begin
             //Mailboxes
-            driver_monitor_inst[i].agente_driver    = agente_driver[i];
-            driver_monitor_inst[i].agente_monitor   = agente_monitor[i];
+            driver_monitor_inst[i].inst_driver.agente_driver    = agente_driver[i];
+            driver_monitor_inst[i].inst_monitor.agente_monitor   = agente_monitor[i];
             
-            //Interfaz (Aun le falta ser terminado)
-            driver_monitor_inst[i].fifo_in.rst      = _FIFOS.rst  //corregir esto.
-            driver_monitor_inst[i].fifo_in.pnding   = _FIFOS.pnding[i];
-            driver_monitor_inst[i].fifo_in.push     = _FIFOS.push[i];
-            driver_monitor_inst[i].fifo_in.pop      = _FIFOS.pop[i];
-            driver_monitor_inst[i].fifo_in.D_pop    = _FIFOS.D_pop[i];
-            driver_monitor_inst[i].fifo_out.D_push  = _FIFOS.D_push[i];
+            //Interfaz
+            driver_monitor_inst[i].inst_driver.fifo_in.rst      = _FIFOS.rst  //corregir esto.
+            driver_monitor_inst[i].inst_driver.fifo_in.pnding   = _FIFOS.pnding[i];
+            driver_monitor_inst[i].inst_monitor.fifo_out.push   = _FIFOS.push[i];
+            driver_monitor_inst[i].inst_monitor.fifo_out.pop    = _FIFOS.pop[i];
+            driver_monitor_inst[i].inst_driver.fifo_in.D_pop    = _FIFOS.D_pop[i];
+            driver_monitor_inst[i].inst_monitor.fifo_out.D_push = _FIFOS.D_push[i];
         end
-
-
     endfunction
 
     virtual task run();
         $display("[%g]  El ambiente fue inicializado",$time);
-        fork
-            driver_monitor.run();
-        join_none
+
+        for (int i = 0; i < drivers; i++)begin //Se debe usar un for porque hay que hacer que cada uno haga run
+            fork
+                driver_monitor_inst[i].run();
+            join_none
+        end
     endtask 
-    
-
-    
-
-
 endclass
