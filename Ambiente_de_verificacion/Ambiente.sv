@@ -13,26 +13,31 @@ class ambiente #(parameter width = 16,  parameter depth = 8, parameter drivers =
     function new();
 
         //Instanciacion de los mailboxes
-        for (int i = 1; i<= drivers; i++)begin
+        for (int i = 0; i< drivers; i++)begin
             agente_monitor[i] = new();
             agente_driver[i] = new();
         end
-
+        
         //instanciacion de los componentes del ambiente
-        for (int i = 1; i <= drivers; i++)begin
-            driver_monitor_inst[i] = new(i);   //Los construyo y les digo cual es su terminal
+        for (int i = 0; i < drivers; i++)begin
+            driver_monitor_inst[i] = new(i + 1);   //Los construyo y les digo cual es su terminal
         
         end
 
         //Conexion de las interfaces y mailboxes en el ambiente
         for (int i = 1; i<= drivers; i++) begin
-            driver_monitor_inst[i].agente_driver = agente_driver[i];
-            driver_monitor_inst[i].agente_monitor = agente_monitor[i];
-            driver_monitor_inst[i].fifo_in.rts = _FIFOS.rst[]  //corregir esto.
+            //Mailboxes
+            driver_monitor_inst[i].agente_driver    = agente_driver[i];
+            driver_monitor_inst[i].agente_monitor   = agente_monitor[i];
+            
+            //Interfaz (Aun le falta ser terminado)
+            driver_monitor_inst[i].fifo_in.rst      = _FIFOS.rst  //corregir esto.
+            driver_monitor_inst[i].fifo_in.pnding   = _FIFOS.pnding[i];
+            driver_monitor_inst[i].fifo_in.push     = _FIFOS.push[i];
+            driver_monitor_inst[i].fifo_in.pop      = _FIFOS.pop[i];
+            driver_monitor_inst[i].fifo_in.D_pop    = _FIFOS.D_pop[i];
+            driver_monitor_inst[i].fifo_out.D_push  = _FIFOS.D_push[i];
         end
-
-        //Conexion especifica de las fifos con la entrada del DUT
-        for (int i = 1)
 
 
     endfunction

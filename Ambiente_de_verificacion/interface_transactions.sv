@@ -10,8 +10,8 @@ class trans_bus #(parameter width = 16, parameter max_drivers = 4);
     rand int            retardo;        //Duracion de envio de cada dato
     bit [width - 1:0]   paquete;        //Dato a enviar
     rand tipo_trans     tipo;           //envio, broadcast, reset
-    int                 tiempo          //Representa el tiempo en el que se ejecuto una transaccion
-    rand int            driver;         //valor del driver a hacer la transaccion
+    int                 tiempo;         //Representa el tiempo en el que se ejecuto una transaccion
+    rand int            driver;         //valor del driver que va a hacer a hacer la transaccion
     int                 destino;        //Con este id ya podre mandar desde el agente directamente al destino
     
     //El paquete se divide en dos pedazos
@@ -19,27 +19,31 @@ class trans_bus #(parameter width = 16, parameter max_drivers = 4);
     rand bit [7:0] ID_unknown;
     rand bit [7:0] payload;  //payload
 
-    //assign paquete = {ID,payload};  //Uniendo el broadcast con el paquete. Se puede ??
+    //assign paquete = {ID,payload};  //Uniendo el broadcast con el paquete. Se puede
 
-    constraint id    {ID <= 8'd8; ID > 8'd0;}; //Limites del broadcast
-    constraint id_unk{ID_unknown > 8'd8;}; //Pone por fuera de los limites el ID
-    constraint delay {retardo <= max_retardo; retardo >= 0}; //Debe ser menor a un retardo maximo
-    constraint fifos {driver <= max_drivers; driver > 0;}; //Aqui se se necesta el numero de un driver aleatorio
+    constraint id    {ID < max_drivers + 1; ID > 0;}; //Limites del broadcast
+    constraint id_unk{ID_unknown > max_drivers;}; //Pone por fuera de los limites el ID
+  	constraint delay {retardo < max_retardo + 1; retardo > -1;}; //Debe ser menor a un retardo maximo
+  	constraint fifos {driver < max_drivers + 1; driver > 0;}; //Aqui se se necesta el numero de un driver aleatorio
                                                        //Usar el driver especifico
     
 
-    function new (int retardo = 0, int max_retardo = 0, bit [7:0] id = '0, bit [7:0] payload = '0,  tipo_trans tipo = envio, int tmp = 0, int driver = 0, bit [7:0] id_unk = '0, );  
+    function new (int retardo = 0, int max_retardo = 0, bit [7:0] id = 8'b1, bit [7:0] payload = '0,  tipo_trans tipo = envio, int tmp = 0, int driver = 1, bit [7:0] id_unk = '0);  
         this.max_retardo = max_retardo;
-        this.retardo     = retardo;
-        this.ID          = id;
-        this.payload     = payload;
-        this.tipo        = tipo;
+        this.retardo     = retardo;  
+        this.ID          = id;       
+        this.payload     = payload;  
+        this.tipo        = tipo;     
         this.tiempo      = tmp;
-        this.paquete     = {ID, payload};
+        this.paquete     = {id, payload};
         this.driver      = driver;
         this.ID_unknown  = id_unk;
         this.destino     = $bits(ID);  //Se le pone un atributo de destino a cada fifo de salida
     endfunction
+
+   	//function set_pkg();
+      //  this.paquete = {this.ID, this.payload};
+    //endfunction
     
     function clean();
         this.max_retardo = 0;
@@ -55,13 +59,14 @@ class trans_bus #(parameter width = 16, parameter max_drivers = 4);
     endfunction
     
     function void print_in(string tag = "");
-        $display("[%g] %s Retardo=%g Tipo=%s Paquete=%g tiempo= %g FIFO_in = %d",$time,tag,this.retardo,this.tipo,this.paquete,this.tiempo, this.driver);
+      $display("[%g] %s Retardo=%g Tipo=%s ID=%b Payload=%b tiempo= %g FIFO_in = %d",$time,tag,this.retardo,this.tipo,this.ID, this.payload,this.tiempo, this.driver);
     endfunction
 
     function void print_out(string tag = "");
-        $display("[%g] %s Retardo=%g Tipo=%s Paquete=%g tiempo= %g FIFO_out = %d",$time,tag,this.retardo,this.tipo,this.paquete,this.tiempo, this.destino);
+      $display("[%g] %s Retardo=%g Tipo=%s ID=%b Payload= %b tiempo = %g FIFO_out = %d",$time,tag,this.retardo,this.tipo,this.ID, this.payload, this.tiempo, this.destino);
     endfunction
 endclass
+
 
 //Interface FIFOS para conectar el sistema completo
 interface FIFOS #(parameter width = 16, parameter drivers = 8, parameter bits = 1)(
@@ -88,7 +93,7 @@ interface FIFO #(parameter width = 16)(
     logic [width - 1:0]D_push;    //Pkg de salida
 
 endinterface
-    
+
     
 //Objeto de transaccion usado en el scoreboard
 

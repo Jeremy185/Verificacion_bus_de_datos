@@ -1,4 +1,5 @@
 
+`include "interface_transaction.sv"
 //Driver/monitor
 
 class monitor #(parameter width = 16, parameter depth = 8, parameter drivers = 4);
@@ -6,7 +7,6 @@ class monitor #(parameter width = 16, parameter depth = 8, parameter drivers = 4
     virtual FIFO #(.width(width)) fifo_out;
 
     bit [width-1:0] cola_out[$]; //Declaracion del queue del monitor que solo almacenas paquetes recibidos
-                                //Corregir
     int   id;   //El id propio de cada terminal en logic para poderlo comparar con los ID de los paquetes
 
 
@@ -17,17 +17,19 @@ class monitor #(parameter width = 16, parameter depth = 8, parameter drivers = 4
 
     task run();
         $display("[%g] La FIFO de salida %d fue inicializada",$time, id );
-        
+      @(posedge fifo_out.clk);
+        fifo_out.rst = 1;
+      @(posedge fifo_out.clk);
         forever begin
             trans_bus #(.width(width), .max_drivers(drivers)) transaccion;
+          	fifo_out.rst = 0;
             $display("[%g] La FIFO de salida %d espera por una transacción",$time, id);
-            espera = 0;  //No creo que el retardo sea relevante en este caso
             
             @(posedge fifo_out.clk);
             agente_monitor.get(transaccion);
-            transaccion.print_out("FIFO: Transaccion recibida");
+          	transaccion.print_out("FIFO de salida: Transaccion recibida");
             $display("Transacciones pendientes en el mailbox agente_monitor %d = %g",id,agente_monitor.num());
-
+			
             while(fifo_out.push == 0)begin
                 @(posedge fifo_out.clk);
             end
@@ -35,20 +37,18 @@ class monitor #(parameter width = 16, parameter depth = 8, parameter drivers = 4
             case(transaccion.tipo)
                 envio: begin
                     cola_out.push_back(fifo_out.D_push); //Aqui cuando detecta una señal de pull entonces envia el dato.
-                    $display("FIFO out %d recibio el dato ")
+                  	@(posedge fifo_out.clk);
+                    $display("FIFO out %d recibio el dato %b ", id, fifo_out.D_push);
+                  	@(posedge fifo_out.clk);
                     //transaccion.print_out("Driver: Transaccion ejecutada");
                 end
             endcase
-
-
+          	@(posedge fifo_out.clk);
         end
     endtask
 endclass
 
-
-
-
-class driver #(parameter width = 16, parameter depth = 8, parameter drivers = 4);
+class driver #(parameter width = 16, parameter depth = 8, parameter drivers = 4); //Funcionando
     trans_bus_mbx agente_driver;
     virtual FIFO #(.width(width)) fifo_in;  //declaracion del queue del driver    
     trans_bus cola_in[$];
@@ -69,7 +69,7 @@ class driver #(parameter width = 16, parameter depth = 8, parameter drivers = 4)
 
         forever begin 
             trans_bus #(.width(width), .max_drivers(drivers)) transaccion;
-            fifo_in.pnding = 0;  //Pongo la señal de pending que va a la entrada del dut en 0
+            fifo_in.pndng = 0;  //Pongo la señal de pending que va a la entrada del dut en 0
             fifo_in.D_pop  ='0;  //Pongo todos los bits del paquete en 0 bits 
             fifo_in.rst    = 0;  //Pongo el reset en 0.
 
@@ -79,7 +79,7 @@ class driver #(parameter width = 16, parameter depth = 8, parameter drivers = 4)
 
             @(posedge fifo_in.clk);
             agente_driver.get(transaccion); //obtengo la transaccion del mailbox
-            transaccion.print("Driver: Transaccion recibida");
+            transaccion.print_in("Driver: Transaccion recibida");
             $display("Transacciones pendientes en el mailbox agente_driver %d = %g",id,agente_driver.num());
             
             while(espera < transaccion.retardo)begin //Hago un retardo
@@ -92,9 +92,9 @@ class driver #(parameter width = 16, parameter depth = 8, parameter drivers = 4)
 
             case(transaccion.tipo)
                 envio: begin
-                    fifo_in.D_pop = cola_in.pop_front;
+                    fifo_in.D_pop = cola_in.pop_front.paquete;
                     @(posedge fifo_in.clk);
-                    fifo_in.pnding = 1;             //Ya el dut puede tomar el dato
+                    fifo_in.pndng = 1;             //Ya el dut puede tomar el dato
                     @(posedge fifo_in.clk);
                 end
             endcase
@@ -104,6 +104,7 @@ class driver #(parameter width = 16, parameter depth = 8, parameter drivers = 4)
     endtask
 
 endclass
+
 
 class driver_monitor #(parameter width = 16, parameter depth = 8, parameter drivers = 4);
     
