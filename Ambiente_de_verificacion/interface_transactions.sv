@@ -41,10 +41,6 @@ class trans_bus #(parameter width = 16, parameter max_drivers = 4);
         this.destino     = $bits(ID);  //Se le pone un atributo de destino a cada fifo de salida
     endfunction
 
-   	//function set_pkg();
-      //  this.paquete = {this.ID, this.payload};
-    //endfunction
-    
     function clean();
         this.max_retardo = 0;
         this.retardo     = 0;

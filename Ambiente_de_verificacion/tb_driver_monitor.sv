@@ -26,8 +26,10 @@ module tb_bus_de_datos;
       
       	driver_monitor_inst = new(1);// Inicializacion del driver y el monitor
       
-      	
-      	driver_monitor_inst.inst_driver.fifo_in = fifo_in;   //Conexion de las interfaces
+      	driver_monitor_inst.fifo_in = fifo_in;//Inicializacion de las interfaces
+      	driver_monitor_inst.fifo_out = fifo_out;
+      
+      	driver_monitor_inst.inst_driver.fifo_in = fifo_in;
       	driver_monitor_inst.inst_monitor.fifo_out = fifo_out;
       
       	driver_monitor_inst.inst_driver.agente_driver = agente_driver; //Conexion de los mailboxes
