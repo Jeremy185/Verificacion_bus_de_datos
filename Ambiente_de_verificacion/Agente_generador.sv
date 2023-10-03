@@ -1,26 +1,27 @@
 `timescale 1ns / 1ps
 
-//////////////////////////////////////////////////////////////////////////////////////////////////
-// Agente/Generador: Este bloque se encarga de generar las secuencias de eventos para el driver //
-// 
-//////////////////////////////////////////////////////////////////////////////////////////////////
 
 
-class agente #(parameter width = 16, depth = 8);
-    test_agente_mbx                           test_agente_mailbox;        //Mailbox para comunicar al agente con el test
-    trans_bux_mbx                             agente_driver_mailbox;      //Comunica al agente con el driver (son varios drivers)
+class agente #(parameter width = 16, parameter depth = 8, parameter drivers = 4);
+  
+  	//Mailboxes
+  	test_agente_mbx                           test_agente_mailbox;        //Mailbox para comunicar al agente con el test
+  	trans_bux_mbx                             agente_driver[drivers];   	//Mailbox del agente driver
+    trans_bux_mbx                             agente_monitor[drivers]; 		//Mailbox del agente monitor
     
     int                                       num_transacciones;          //Numero de transacciones
     int                                       max_retardo;                //Retardo maximo (para todas las transaccion
-    tipo_trans                                tpo_spec;
+    
+  	tipo_trans                                tpo_spec;
     logic [7:0]                               ID_spec;                    //ID especifico (para el caso de solo broadcast)
     
-    instrucciones_agente                      instruccion;
+  	instrucciones_agente                      instruccion;
     trans_bus #(.width(width), .depth(depth)) transaccion;                //Es un ente tipo trans bus que se envia por el mailbox al driver
                                                                           //Tiene el tamaño del paquete que se va a enviar
     function new;
         num_transacciones = 100;
         max_retardo = 10;
+      	ID_spec     = {8{1'b1}};
     endfunction
     
     
@@ -33,64 +34,73 @@ class agente #(parameter width = 16, depth = 8);
                 $display ("[%g] Agente: se recibe instruccion", $time);
                 test_agente_mailbox.get(instruccion);
                 
-                
+        
                 case(instruccion)
                     envio_aleatorio: begin  //Necesito que por cada transaccion se genere 
                         for (int i = 0; i < num_transacciones; i++) begin
-                            transaccion = new;
+                            transaccion = new();
                             transaccion.max_retardo = max_retardo;
                             transaccion.randomize();
-                            tpo_spec = envio;
-                            transaccion.tipo = tpo_spec;
-                            transaccion.print("Agente: transaccion creada");
-                            agente_driver_mbx.put(transaccion);
+                            tipo_spec = envio;
+                            transaccion.tipo = tipo_spec;
+                            transaccion.paquete = {transaccion.ID, transaccion.payload};
+                            transaccion.destino = transaccion.ID;
+                          
+                            agente_driver[transaccion.driver - 1].put(transaccion); //Meto la transaccion en el driver especifi
+                            agente_monitor[transaccion.ID].put(transaccion); //Meto la transaccion en el monitor destino 
+
                         end
-
-
-                        //Sera necesario hacer lectura de los datos enviados en este punto??
-                        //for (int i=0; i<num_transacciones; i++)begin
-                            //transaccion = new ; //Porque aqui hace un nuevo ente ?
-
-                        //end
                     end
 
                     broadcast_aleatorio: begin  //En este caso ya el broadcast no sera aleatorio
                                                 //Porque se esta verificando que solo se haga broadcast
                         for (int i = 0; i < num_transacciones; i++) begin
-                            transaccion             = new;
+                            transaccion = new();
                             transaccion.max_retardo = max_retardo;
-                            transaccion.randomize();                  //Pongo todo aleatorio
-                            transaccion.ID          = ID_spec; //Luego solo especifico el broadcast
-                            tpo_spec                = envio;          
-                            transaccion.tipo        = tpo_spec;       //Donde es que toman un valor ??
-                            transaccion.print("Agente: transaccion creada");
-                            agente_driver_mbx.put(transaccion);
+                            transaccion.randomize();
+                          	transaccion.ID = ID_spec; //Se asigno el ID de broadcast.
+                            tipo_spec = broadcast;
+                            transaccion.tipo = tipo_spec;
+                            transaccion.paquete = {transaccion.ID, transaccion.payload};
+                            transaccion.destino = transaccion.ID;
+                          
+                            agente_driver[transaccion.driver - 1].put(transaccion); //Meto la transaccion en el driver especifi
+                          
+                          	//No se mete la instruccion en el monitor.OJOOOOOOOO
+                            //agente_monitor[transaccion.ID].put(transaccion); //Meto la transaccion en el monitor destino 
                         end
 
                     end
 
                     reset_half_sent: begin
-
                         for (int i = 0; i < num_transacciones; i++) begin
-                            transaccion                 = new;
-                            transaccion.max_retardo     = max_retardo;
+                            transaccion = new();
+                            transaccion.max_retardo = max_retardo;
                             transaccion.randomize();
-                            tpo_spec                    = reset;
-                            transaccion.tipo            = tpo_spec;
-                            transaccion.print("Agente: transaccion creada");
-                            agente_driver_mbx.put(transaccion);
+                            tipo_spec = reset;
+                            transaccion.tipo = tipo_spec;
+                            transaccion.paquete = {transaccion.ID, transaccion.payload};
+                            transaccion.destino = transaccion.ID;
+                          
+                            agente_driver[transaccion.driver - 1].put(transaccion); //Meto la transaccion en el driver especifi
+                            agente_monitor[transaccion.ID].put(transaccion); //Meto la transaccion en el monitor destino 
                         end
                     end
 
                     all_for_one: begin //driver, solo se pone la direccion ID como destino en todos los drivers
                         for (int i = 0; i < num_transacciones; i++) begin
-                            transaccion = new;
-                            transaccion.max_retardo = max_retardo;
-                            transaccion.randomize();
-                            tpo_spec = todos_envio;  //Provoca que mas de uno envie
-                            transaccion.tipo = tpo_spec;
-                            transaccion.print("Agente: transaccion creada");
-                            agente_driver_mbx.put(transaccion);
+                            for (int j = 0; j < drivers; j++)begin
+                              transaccion = new();
+                              transaccion.max_retardo = max_retardo;
+                              transaccion.randomize();
+                              tipo_spec = envio;
+                              transaccion.tipo = tipo_spec;
+                              transaccion.paquete = {transaccion.ID, transaccion.payload};
+                              transaccion.destino = transaccion.ID;
+
+                              agente_driver[transaccion.driver - 1].put(transaccion); //Meto la transaccion en el driver especifi
+                              agente_monitor[transaccion.ID].put(transaccion); //Meto la transaccion en el monitor destino 
+                            end 
                         end
 
                     end
@@ -139,4 +149,3 @@ class agente #(parameter width = 16, depth = 8);
     endtask
     
 endclass
-

@@ -36,9 +36,9 @@ class ambiente #(parameter width = 16,  parameter depth = 8, parameter drivers =
   	function if_conexion();//Conexion interfaces
       
       	for(int i = 0; i < drivers ; i++) begin
-            if (i == 0) begin 
-            	driver_monitor_inst[i].fifo_in.rst = _FIFOS.rst;
-            end 
+           
+            driver_monitor_inst[i].fifo_in.rst = _FIFOS.rst;
+           
           
           	driver_monitor_inst[i].fifo_in.pndng[0][i] = _FIFOS.pndng[0][i];
             driver_monitor_inst[i].fifo_in.D_pop[0][i] = _FIFOS.D_pop[0][i];

@@ -140,14 +140,15 @@ class driver #(parameter width = 16, parameter depth = 8, parameter drivers = 4)
                 end
               
               	reset: begin
-                  	for (int i = 0; i< transaccion.retardo; i++)begin
-                      	@(posedge fifo_in.clk);
-                      	retardo++;
-                    end
-                  
+                  	@(posedge fifo_in.clk);
+                  	@(posedge fifo_in.clk);
+                  	@(posedge fifo_in.clk);
+                  	
                   	fifo_in.rst = 1;
-                 	@(posedge fifo_in.clk);
-                 	@(posedge fifo_in.clk);
+                	
+                  	@(posedge fifo_in.clk);
+                  	@(posedge fifo_in.clk);
+                  	@(posedge fifo_in.clk);
                   	fifo_in.rst = 0;
                 end
               
