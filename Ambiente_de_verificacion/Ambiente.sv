@@ -27,16 +27,19 @@ class ambiente #(parameter width = 16,  parameter depth = 8, parameter drivers =
       
       	foreach(driver_monitor_inst[i]) begin//Mailboxes
           	$display ("Los mailboxes %d se conectaron",i);
-            driver_monitor_inst[i].inst_driver.agente_driver    = agente_driver[i];
-            driver_monitor_inst[i].inst_monitor.agente_monitor  = agente_monitor[i];
+          	driver_monitor_inst[i].agente_driver    = agente_driver[i];
+          	driver_monitor_inst[i].agente_monitor  = agente_monitor[i];
         end
 
     endfunction
   
-  	function if_conexion();
+  	function if_conexion();//Conexion interfaces
       
       	for(int i = 0; i < drivers ; i++) begin
-          	driver_monitor_inst[i].fifo_in.rst = _FIFOS.rst;
+            if (i == 0) begin 
+            	driver_monitor_inst[i].fifo_in.rst = _FIFOS.rst;
+            end 
+          
           	driver_monitor_inst[i].fifo_in.pndng[0][i] = _FIFOS.pndng[0][i];
             driver_monitor_inst[i].fifo_in.D_pop[0][i] = _FIFOS.D_pop[0][i];
             driver_monitor_inst[i].fifo_out.push[0][i]= _FIFOS.push[0][i];

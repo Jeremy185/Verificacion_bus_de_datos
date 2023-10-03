@@ -7,7 +7,7 @@ typedef enum {envio, broadcast, reset} tipo_trans;
 
 class trans_bus #(parameter width = 16, parameter max_drivers = 4);
     int                 max_retardo;    //Retardo maximo por transaccion.
-    rand int            retardo;        //Duracion de envio de cada dato
+  	rand int            retardo;        //Duracion de envio de cada dato
     bit [width - 1:0]   paquete;        //Dato a enviar
     rand tipo_trans     tipo;           //envio, broadcast, reset
     int                 tiempo;         //Representa el tiempo en el que se ejecuto una transaccion
@@ -21,7 +21,7 @@ class trans_bus #(parameter width = 16, parameter max_drivers = 4);
 
     //assign paquete = {ID,payload};  //Uniendo el broadcast con el paquete. Se puede
 
-    constraint id    {ID < max_drivers + 1; ID > 0;}; //Limites del broadcast
+  	constraint id    {ID < max_drivers; ID >= 0;}; //Limites del broadcast
     constraint id_unk{ID_unknown > max_drivers;}; //Pone por fuera de los limites el ID
   	constraint delay {retardo < max_retardo + 1; retardo > -1;}; //Debe ser menor a un retardo maximo
   	constraint fifos {driver < max_drivers + 1; driver > 0;}; //Aqui se se necesta el numero de un driver aleatorio
@@ -38,7 +38,7 @@ class trans_bus #(parameter width = 16, parameter max_drivers = 4);
         this.paquete     = {id, payload};
         this.driver      = driver;
         this.ID_unknown  = id_unk;
-        this.destino     = $bits(ID);  //Se le pone un atributo de destino a cada fifo de salida
+        this.destino     = ID+1;  //Se le pone un atributo de destino a cada fifo de salida
     endfunction
 
     function clean();
