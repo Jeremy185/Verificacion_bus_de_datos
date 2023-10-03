@@ -15,36 +15,53 @@ class monitor #(parameter width = 16, parameter depth = 8, parameter drivers = 4
     endfunction
 
     task run();
-      $display("[%g] La FIFO de salida %d fue inicializada",$time, id );
+        $display("[%g] La FIFO de salida %d fue inicializada",$time, id );
      	@(posedge fifo_out.clk);
       
-      fifo_out.rst = 1;
-      @(posedge fifo_out.clk);
+      	fifo_out.rst = 1;
+      	@(posedge fifo_out.clk);
       
-      forever begin
-          trans_bus #(.width(width), .max_drivers(drivers)) transaccion;
-          fifo_out.rst = 0;
-          $display("[%g] La FIFO de salida %d espera por una transacción",$time, id);
-        
-          agente_monitor.get(transaccion);
-          transaccion.print_out("FIFO de salida: Transaccion recibida");
-          $display("Transacciones pendientes en el mailbox agente_monitor %d = %g",id,agente_monitor.num());
-    
-          case(transaccion.tipo) //DATO EN NEGEDGE
-              envio: begin		
-                  while(fifo_out.push[0][id-1]==0)begin
-                      @(posedge fifo_out.clk);
-                  end
-
-                  cola_out.push_back(fifo_out.D_push[0][id-1]); //Aqui cuando detecta una señal de push entonces envia el dato.
-                  $display("FIFO out %d recibio el dato %b ", id, cola_out.pop_front);
-                  
-                end
-          endcase
-                
-        
-          @(posedge fifo_out.clk);
-      end
+        forever begin
+            trans_bus #(.width(width), .max_drivers(drivers)) transaccion;
+          	fifo_out.rst = 0;
+            $display("[%g] La FIFO de salida %d espera por una transacción",$time, id);
+          
+            agente_monitor.get(transaccion);
+          	transaccion.print_out("FIFO de salida: Transaccion recibida");
+            $display("Transacciones pendientes en el mailbox agente_monitor %d = %g",id,agente_monitor.num());
+			
+		case(transaccion.tipo) //DATO EN NEGEDGE
+        	envio: begin		
+              	while(fifo_out.push[0][id-1]==0)begin
+                  	@(posedge fifo_out.clk);
+              	end
+ 
+            	cola_out.push_back(fifo_out.D_push[0][id-1]); //Aqui cuando detecta una señal de push entonces envia el dato.
+                $display("FIFO out %d recibio el dato %b ", id, fifo_out.D_push[0][id-1]);
+            end
+          
+          	broadcast: begin		
+              	while(fifo_out.push[0][id-1]==0)begin
+                  	@(posedge fifo_out.clk);
+              	end
+ 
+            	cola_out.push_back(fifo_out.D_push[0][id-1]); //Aqui cuando detecta una señal de push entonces envia el dato.
+                $display("FIFO out %d recibio el dato %b ", id, fifo_out.D_push[0][id-1]);
+            end
+          
+          	reset: begin		
+              	while(fifo_out.push[0][id-1]==0)begin
+                  	@(posedge fifo_out.clk);
+              	end
+ 
+            	cola_out.push_back(fifo_out.D_push[0][id-1]); //Aqui cuando detecta una señal de push entonces envia el dato.
+              	$display("FIFO out %d recibio el dato %b ", id, fifo_out.D_push[0][id-1]);
+            end
+        endcase
+          
+          
+          	@(posedge fifo_out.clk);
+        end
     endtask
 endclass
 
@@ -56,6 +73,8 @@ class driver #(parameter width = 16, parameter depth = 8, parameter drivers = 4)
     
     int espera;                     //Variable que hace el retardo
     int id;                         //Valor del id
+  
+  	int retardo;
     function new(int terminal);
         this.id = terminal;         //Da el valor correspondiente a la terminal
         cola_in.delete();           //Inicializa la cola
@@ -83,7 +102,8 @@ class driver #(parameter width = 16, parameter depth = 8, parameter drivers = 4)
           
             $display("[%g]El driver %d espera por transaccion", $time, id);
             espera = 0;
-          	
+          	retardo = 0;
+          
           	while(agente_driver.num()==0)begin
               	@(posedge fifo_in.clk);
               	fifo_in.pndng[0][id-1] = 0;
@@ -91,7 +111,6 @@ class driver #(parameter width = 16, parameter depth = 8, parameter drivers = 4)
           
             agente_driver.get(transaccion); //obtengo la transaccion del mailbox
           	cola_in.push_back(transaccion); //Meto el dato dentro del que
-          
             transaccion.print_in("Driver: Transaccion recibida");
             $display("Transacciones pendientes en el mailbox agente_driver %d = %g",id,agente_driver.num());
             
@@ -105,11 +124,35 @@ class driver #(parameter width = 16, parameter depth = 8, parameter drivers = 4)
                 envio: begin
         			fifo_in.D_pop[0][id-1] = cola_in.pop_front.paquete;
                     fifo_in.pndng[0][id-1] = 1;
-                  @(posedge fifo_in.clk);
                   	@(posedge fifo_in.clk);
                   	@(posedge fifo_in.clk);
-                  fifo_in.D_pop[0][id-1] = '0;
+                  	@(posedge fifo_in.clk);
+                  	fifo_in.D_pop[0][id-1] = '0;
                 end
+              
+              	broadcast: begin
+   					fifo_in.D_pop[0][id-1] = cola_in.pop_front.paquete;
+                    fifo_in.pndng[0][id-1] = 1;
+                  	@(posedge fifo_in.clk);
+                  	@(posedge fifo_in.clk);
+                  	@(posedge fifo_in.clk);
+                  	fifo_in.D_pop[0][id-1] = '0;
+                end
+              
+              	reset: begin
+                  	for (int i = 0; i< transaccion.retardo; i++)begin
+                      	@(posedge fifo_in.clk);
+                      	retardo++;
+                    end
+                  
+                  	fifo_in.rst = 1;
+                 	@(posedge fifo_in.clk);
+                 	@(posedge fifo_in.clk);
+                  	fifo_in.rst = 0;
+                end
+              
+              
+              
             endcase
             @(posedge fifo_in.clk);
         end

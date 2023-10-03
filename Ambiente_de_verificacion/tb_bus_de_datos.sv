@@ -15,8 +15,8 @@ module tb_bus_de_datos;
 
     //Instruccion
     trans_bus #(.width(16), .max_drivers(4)) transaccion[3];
-	  int max_retardo = 10;
-	  tipo_trans tipo_spec;
+	int max_retardo = 10;
+	tipo_trans tipo_spec;
   
     ambiente #(.width(width), .depth(depth), .drivers(drivers)) prueba;
     FIFOS #(.width(width), .drivers(drivers), .bits(bits)) _FIFOS (.clk(clk));
@@ -38,7 +38,7 @@ module tb_bus_de_datos;
 
     initial begin
       	$dumpfile("test.vcd");
-        $dumpvars(0, DUT);
+      $dumpvars(0, DUT);
         clk = 0;
       
         for (int i = 0; i < drivers ; i++) begin
@@ -83,15 +83,17 @@ module tb_bus_de_datos;
       
       	for (int i = 0; i < 1000; i++) begin
         	@(posedge clk);
-     	  end
+     	end
       
+      
+      	//Prueba
       
       	transaccion[0] = new();
       	transaccion[0].max_retardo = max_retardo;
       	transaccion[0].randomize();
       	tipo_spec = envio;
       	transaccion[0].tipo = tipo_spec;
-     	  transaccion[0].paquete = {transaccion[0].ID, transaccion[0].payload};
+     	transaccion[0].paquete = {transaccion[0].ID, transaccion[0].payload};
       	transaccion[0].destino = transaccion[0].ID;
       
       
@@ -106,8 +108,30 @@ module tb_bus_de_datos;
       
       	for (int i = 0; i < 1000; i++) begin
         	@(posedge clk);
-     	  end
+     	end
+      	
       
+        transaccion[1] = new();
+        transaccion[1].max_retardo = max_retardo;
+        transaccion[1].randomize();
+      	tipo_spec = envio;
+        transaccion[1].tipo = tipo_spec;
+        transaccion[1].paquete = {transaccion[1].ID, transaccion[1].payload};
+        transaccion[1].destino = transaccion[1].ID;
+      
+      
+      	//Necesito conectar desde el agente hasta la instancia especifica del driver y el monitor
+
+        //Meto la transaccion en el driver especifico
+      	prueba.driver_monitor_inst[transaccion[1].driver-1].inst_driver.agente_driver.put(transaccion[1]); //Meto la transaccion en el driver 1
+
+        //Meto la instruccion en el agente de destino
+     	prueba.driver_monitor_inst[transaccion[1].ID].inst_monitor.agente_monitor.put(transaccion[1]);
+      
+      
+      	for (int i = 0; i < 1000; i++) begin
+        	@(posedge clk);
+     	end
       	
       	$finish;
       
