@@ -15,10 +15,10 @@ module tb_bus_de_datos;
 
     //Instruccion
     trans_bus #(.width(16), .max_drivers(4)) transaccion[3];
-	int max_retardo = 10;
-	tipo_trans tipo_spec;
+	  int max_retardo = 10;
+	  tipo_trans tipo_spec;
   
-    ambiente #(.width(width), .depth(depth), .drivers(drivers)) prueba;
+    ambiente #(.width(width), .depth(depth), .drivers(drivers), .broadcast({8{1'b1}})) prueba;
     FIFOS #(.width(width), .drivers(drivers), .bits(bits)) _FIFOS (.clk(clk));
   
   	trans_bus_mbx agente_monitor[drivers];  
@@ -93,7 +93,7 @@ module tb_bus_de_datos;
       	transaccion[0].randomize();
       	tipo_spec = envio;
       	transaccion[0].tipo = tipo_spec;
-     	transaccion[0].paquete = {transaccion[0].ID, transaccion[0].payload};
+     	  transaccion[0].paquete = {transaccion[0].ID, transaccion[0].payload};
       	transaccion[0].destino = transaccion[0].ID;
       
       

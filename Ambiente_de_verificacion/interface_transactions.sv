@@ -1,6 +1,6 @@
 
 //Definicion de las posibles transacciones para el bus 
-typedef enum {envio, broadcast, reset} tipo_trans; 
+typedef enum {envio,broadcast,reset} tipo_trans; 
 
 
 //Transaccione que entran y salen del DUT  (Creo que hay que meter esto en un array)
@@ -14,26 +14,28 @@ class trans_bus #(parameter width = 16, parameter max_drivers = 4);
     rand int            driver;         //valor del driver que va a hacer a hacer la transaccion
     int                 destino;        //Con este id ya podre mandar desde el agente directamente al destino
     
+  
+  	bit [7:0] dato_recibido;			//Es el atributo que el monitor va a modificar para que el checker pueda comparar el recibido con el enviado
+  											
     //El paquete se divide en dos pedazos
     rand bit [7:0] ID;
     rand bit [7:0] ID_unknown;
-    rand bit [7:0] payload;  //payload
+  rand bit [7:0] payload;  //payload
 
     //assign paquete = {ID,payload};  //Uniendo el broadcast con el paquete. Se puede
 
   	constraint id    {ID < max_drivers; ID >= 0;}; //Limites del broadcast
     constraint id_unk{ID_unknown > max_drivers;}; //Pone por fuera de los limites el ID
   	constraint delay {retardo < max_retardo + 1; retardo > -1;}; //Debe ser menor a un retardo maximo
-  	constraint fifos {driver < max_drivers + 1; driver > 0;}; //Aqui se se necesta el numero de un driver aleatorio
+  	constraint fifos {driver < max_drivers; driver >= 0;}; //Aqui se se necesta el numero de un driver aleatorio
                                                        //Usar el driver especifico
     
 
-    function new (int retardo = 0, int max_retardo = 0, bit [7:0] id = 8'b1, bit [7:0] payload = '0,  tipo_trans tipo = envio, int tmp = 0, int driver = 1, bit [7:0] id_unk = '0);  
+    function new (int retardo = 0, int max_retardo = 0, bit [7:0] id = 8'b1, bit [7:0] payload = '0,  tipo_trans tipo = envio, int tmp = 0, int driver = 0, bit [7:0] id_unk = '0);  
         this.max_retardo = max_retardo;
         this.retardo     = retardo;  
         this.ID          = id;       
-        this.payload     = payload;  
-        this.tipo        = tipo;     
+        this.payload     = payload;      
         this.tiempo      = tmp;
         this.paquete     = {id, payload};
         this.driver      = driver;
@@ -46,7 +48,6 @@ class trans_bus #(parameter width = 16, parameter max_drivers = 4);
         this.retardo     = 0;
         this.ID          ='0;
         this.payload     ='0;
-        this.tipo        = envio;
         this.paquete     ='0;
         this.tiempo      = 0;
         this.driver      = 0;
@@ -105,3 +106,4 @@ typedef enum {envio_aleatorio, broadcast_aleatorio, reset_half_sent, all_for_one
 //Mailboxes
 
 typedef mailbox #(trans_bus) trans_bus_mbx;   //Comunica al driver con el agente y con el checker
+typedef mailbox #(instrucciones_agente) test_agente_mbx; //Comunica al test con el agente 
