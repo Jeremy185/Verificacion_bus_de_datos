@@ -1,5 +1,5 @@
 `include "interface_transactions.sv"
-class check #(parameter width = 16, parameter depth = 8, parameter drivers = 4, parameter broadcast = {8{1'b1}}, parameter n_transacs = 100);
+class check #(parameter width = 16, parameter depth = 8, parameter drivers = 4, parameter bc = {8{1'b1}}, parameter n_transacs = 100);
 
 trans_bus #(.width(width), .max_drivers(drivers)) transaccion;
 
