@@ -1,4 +1,4 @@
-`include "interface_transactions.sv"
+
 class monitor #(parameter width = 16, parameter depth = 8, parameter drivers = 4);
     
   	trans_bus_mbx agente_monitor;

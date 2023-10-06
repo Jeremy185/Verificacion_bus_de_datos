@@ -1,4 +1,4 @@
-`include "driver_monitor.sv"
+
 
 class agente #(parameter width = 16, parameter depth = 8, parameter drivers = 4, parameter bc = {8{1'b1}}, parameter n_transacs = 100, parameter mx_retardo = 10);
   

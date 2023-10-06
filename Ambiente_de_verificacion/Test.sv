@@ -1,4 +1,4 @@
-`include "Ambiente.sv"
+
 
 class test#(parameter width = 16, parameter depth = 8, parameter drivers = 4, parameter bc ={8{1'b1}});
 

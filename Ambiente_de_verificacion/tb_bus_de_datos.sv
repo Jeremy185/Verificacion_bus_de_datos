@@ -1,5 +1,9 @@
 `timescale 1ns/1ps
-
+`include "Library.sv"
+`include "interface_transactions.sv"
+`include "driver_monitor.sv"
+`include "Agente_generador.sv"
+`include "Ambiente.sv"
 `include "Test.sv"
 
 module tb_bus_de_datos;
