@@ -5,23 +5,23 @@
 
 class monitor #(parameter width = 16, parameter depth = 8, parameter drivers = 4);
     
-trans_bus_mbx agente_monitor;
-trans_bus_mbx monitor_checker;
+  trans_bus_mbx agente_monitor;
+  trans_bus_mbx monitor_checker;
 
-virtual FIFOS #(.width(width), .drivers(drivers), .bits(1)) fifo_out;
+  virtual FIFOS #(.width(width), .drivers(drivers), .bits(1)) fifo_out;
 
-bit [width-1:0] cola_out[$]; //Declaracion del queue del monitor que solo almacenas paquetes recibidos
-int   id;   //El id propio de cada terminal en logic para poderlo comparar con los ID de los paquetes
+  bit [width-1:0] cola_out[$]; //Declaracion del queue del monitor que solo almacenas paquetes recibidos
+  int   id;   //El id propio de cada terminal en logic para poderlo comparar con los ID de los paquetes
 
 
-function new(int terminal);
+  function new(int terminal);
     this.id = terminal;
     cola_out.delete();
-endfunction
+  endfunction
 
-task run();
+  task run();
     $display("[%g] La FIFO de salida %d fue inicializada",$time, id );
-   @(posedge fifo_out.clk);
+    @(posedge fifo_out.clk);
   
     fifo_out.rst = 1;
     @(posedge fifo_out.clk);
@@ -52,7 +52,7 @@ task run();
           cola_out.push_back(fifo_out.D_push[0][id]); //Aqui cuando detecta una señal de push entonces envia el dato.
             transaccion.dato_recibido = fifo_out.D_push[0][id];//Guardo el dato que se recibio
             transaccion.monitor_receptor = id - 1;//Seteo el monitor que lo recibio
-    transaccion.tiempo_recibido = $time;
+            transaccion.tiempo_recibido = $time;
             monitor_checker.put(transaccion);
             $display("FIFO out %d recibio el dato %b ", id, fifo_out.D_push[0][id]);
         end
@@ -65,7 +65,7 @@ task run();
           cola_out.push_back(fifo_out.D_push[0][id]); //Aqui cuando detecta una señal de push entonces envia el dato.
             transaccion.dato_recibido = fifo_out.D_push[0][id];
             transaccion.monitor_receptor = id - 1;
-    transaccion.tiempo_recibido = $time;
+            transaccion.tiempo_recibido = $time;
             monitor_checker.put(transaccion);
             $display("FIFO out %d recibio el dato %b ", id, fifo_out.D_push[0][id]);
         end
@@ -79,7 +79,7 @@ task run();
           cola_out.push_back(fifo_out.D_push[0][id]); //Aqui cuando detecta una señal de push entonces envia el dato.
             transaccion.dato_recibido = fifo_out.D_push[0][id];
             transaccion.monitor_receptor = id - 1;
-    transaccion.tiempo_recibido = $time;
+            transaccion.tiempo_recibido = $time;
             monitor_checker.put(transaccion);
             $display("FIFO out %d recibio el dato %b ", id, fifo_out.D_push[0][id]);
         end
@@ -87,13 +87,11 @@ task run();
         default: begin
           $display("[%g] Monitor Error: la transacción recibida no tiene tipo valido",$time);
           $finish;
-    end 
+        end 
     endcase
-      
-      
         @(posedge fifo_out.clk);
     end
-endtask
+  endtask
 endclass
 
 class driver #(parameter width = 16, parameter depth = 8, parameter drivers = 4); //Funcionando
@@ -112,86 +110,86 @@ class driver #(parameter width = 16, parameter depth = 8, parameter drivers = 4)
   endfunction 
 
   task run();
-      $display("[%g] La FIFO de entrada %d fue inicializada",$time, id );
-      fifo_in.rst = 1;
-      fifo_in.pndng[0][id] = 0;
-      fifo_in.D_pop[0][id]  ='0;
+    $display("[%g] La FIFO de entrada %d fue inicializada",$time, id );
+    fifo_in.rst = 1;
+    fifo_in.pndng[0][id] = 0;
+    fifo_in.D_pop[0][id]  ='0;
   
     forever begin 
-        trans_bus #(.width(width), .max_drivers(drivers)) transaccion;
+      trans_bus #(.width(width), .max_drivers(drivers)) transaccion;
       
         //Pongo la señal de pending que va a la entrada del dut en 0
         //fifo_in.D_pop[0][id-1]  ='0;  //Pongo todos los bits del paquete en 0 bits 
-        fifo_in.rst    = 0;  //Pongo el reset en 0.
+      fifo_in.rst    = 0;  //Pongo el reset en 0.
       
-        $display("[%g]El driver %d espera por transaccion", $time, id);
-        espera = 0;
-        retardo = 0;
+      $display("[%g]El driver %d espera por transaccion", $time, id);
+      espera = 0;
+      retardo = 0;
     
         
-        agente_driver.get(transaccion); //obtengo la transaccion del mailbox
-        transaccion.print_in("Driver: Transaccion recibida");
-        $display("Transacciones pendientes en el mailbox agente_driver %d = %g",id,agente_driver.num());
+      agente_driver.get(transaccion); //obtengo la transaccion del mailbox
+      transaccion.print_in("Driver: Transaccion recibida");
+      $display("Transacciones pendientes en el mailbox agente_driver %d = %g",id,agente_driver.num());
         
-        while(espera < transaccion.retardo)begin //Hago un retardo/////////
-            @(posedge fifo_in.clk);
-            espera = espera + 1;
-        end
+      while(espera < transaccion.retardo)begin //Hago un retardo/////////
+          @(posedge fifo_in.clk);
+          espera = espera + 1;
+      end
       
-        if(agente_driver.num()==0)begin
-            fifo_in.pndng[0][id] = 0;
+      if(agente_driver.num()==0)begin
+        fifo_in.pndng[0][id] = 0;
         end else begin
-            fifo_in.pndng[0][id] = 1;
+          fifo_in.pndng[0][id] = 1;
         end
       
-        transaccion.tiempo_envio = $time; //Le pongo el tiempo en el que se envio
-        cola_in.push_back(transaccion); //Meto el dato dentro del que
+      transaccion.tiempo_envio = $time; //Le pongo el tiempo en el que se envio
+      cola_in.push_back(transaccion); //Meto el dato dentro del que
       
-        
-        case(transaccion.tipo)
-            broadcast: begin
-                fifo_in.D_pop[0][id] = cola_in.pop_front.paquete;
-                fifo_in.pndng[0][id] = 1;
-                @(posedge fifo_in.clk);
-                @(posedge fifo_in.clk);
-                @(posedge fifo_in.clk);
-                fifo_in.D_pop[0][id] = '0;
-                fifo_in.pndng[0][id] = 0;
-            end
-            envio: begin
-              $display("Entro driver %d", id);
-              while(fifo_in.pop[0][id] == 0)begin
-                @(posedge fifo_in.clk);
-              end
-              
+
+      case(transaccion.tipo)
+          broadcast: begin
               fifo_in.D_pop[0][id] = cola_in.pop_front.paquete;
-              
+              fifo_in.pndng[0][id] = 1;
+              @(posedge fifo_in.clk);
+              @(posedge fifo_in.clk);
+              @(posedge fifo_in.clk);
+              fifo_in.D_pop[0][id] = '0;
+              fifo_in.pndng[0][id] = 0;
+          end
+          envio: begin
+            $display("Entro driver %d", id);
+            while(fifo_in.pop[0][id] == 0)begin
+              @(posedge fifo_in.clk);
             end
-          
-            reset: begin
-                fifo_in.D_pop[0][id] = cola_in.pop_front.paquete;
-                fifo_in.pndng[0][id] = 1;
-                @(posedge fifo_in.clk);
-                @(posedge fifo_in.clk);
-                @(posedge fifo_in.clk);
-                fifo_in.D_pop[0][id] = '0;
-                fifo_in.pndng[0][id] = 0;
-                @(posedge fifo_in.clk);
-                @(posedge fifo_in.clk);
-
-                fifo_in.rst = 1;
               
-                @(posedge fifo_in.clk);
-
-                fifo_in.rst = 0;
-            end
-            default: begin
-              $display("[%g] Driver Error: la transacción recibida no tiene tipo valido",$time);
-              $finish;
-            end 
+            fifo_in.D_pop[0][id] = cola_in.pop_front.paquete;
+              
+          end
           
-        endcase
-        @(posedge fifo_in.clk);
+          reset: begin
+              fifo_in.D_pop[0][id] = cola_in.pop_front.paquete;
+              fifo_in.pndng[0][id] = 1;
+              @(posedge fifo_in.clk);
+              @(posedge fifo_in.clk);
+              @(posedge fifo_in.clk);
+              fifo_in.D_pop[0][id] = '0;
+              fifo_in.pndng[0][id] = 0;
+              @(posedge fifo_in.clk);
+              @(posedge fifo_in.clk);
+
+              fifo_in.rst = 1;
+              
+              @(posedge fifo_in.clk);
+
+              fifo_in.rst = 0;
+          end
+          default: begin
+            $display("[%g] Driver Error: la transacción recibida no tiene tipo valido",$time);
+            $finish;
+          end 
+          
+      endcase
+      @(posedge fifo_in.clk);
     end
 
   endtask
