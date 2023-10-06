@@ -1,10 +1,10 @@
 `include "driver_monitor.sv"
 
-class agente #(parameter width = 16, parameter depth = 8, parameter drivers = 4, parameter bc = {8{1'b1}});
+class agente #(parameter width = 16, parameter depth = 8, parameter drivers = 4, parameter bc = {8{1'b1}}, parameter n_transacs = 100, parameter mx_retardo = 10);
   
   	//Mailboxes
-  	test_agente_mbx                           test_agente_mailbox;        //Mailbox para comunicar al agente con el test
-  
+  	test_agente_mbx                           test_agente;        //Mailbox para comunicar al agente con el test
+
   	//Estos van directamente conectados con los mailbox driver y monitor
   	trans_bus_mbx                             agente_driver[drivers];   	//Mailbox del agente driver
     trans_bus_mbx                             agente_monitor[drivers]; 		//Mailbox del agente monitor
@@ -20,8 +20,8 @@ class agente #(parameter width = 16, parameter depth = 8, parameter drivers = 4,
     trans_bus #(.width(width), .depth(depth)) transaccion;                //Es un ente tipo trans bus que se envia por el mailbox al driver
                                                                           //Tiene el tamaño del paquete que se va a enviar
     function new;
-        num_transacciones = 50;
-        max_retardo = 10;
+        num_transacciones = n_transacs;
+        max_retardo = max_retardo;
       	ID_spec     = bc;
     endfunction
     
@@ -31,9 +31,9 @@ class agente #(parameter width = 16, parameter depth = 8, parameter drivers = 4,
         
         forever begin
             #1
-            if(test_agente_mailbox.num() > 0)begin
+            if(test_agente.num() > 0)begin
                 $display ("[%g] Agente: se recibe instruccion", $time);
-                test_agente_mailbox.get(instruccion);
+                test_agente.get(instruccion);
                 
         
                 case(instruccion)
@@ -44,11 +44,13 @@ class agente #(parameter width = 16, parameter depth = 8, parameter drivers = 4,
                             transaccion.randomize();
                             tpo_spec = envio;
                             transaccion.tipo = tpo_spec;
+                          	transaccion.instruccion = instruccion;
                             transaccion.paquete = {transaccion.ID, transaccion.payload};
                             transaccion.destino = transaccion.ID;
                           
-                            agente_driver[transaccion.driver].put(transaccion); //Meto la transaccion en el driver especifico
+                          	agente_driver[transaccion.driver].put(transaccion); //Meto la transaccion en el driver especifico
                           	agente_monitor[transaccion.ID].put(transaccion); //Meto la transaccion en el monitor destino 
+                          	$display("Driver:%d",transaccion.driver);
 
                         end
                     end
@@ -63,6 +65,7 @@ class agente #(parameter width = 16, parameter depth = 8, parameter drivers = 4,
                           	transaccion.ID = ID_spec; //Se asigno el ID de broadcast.
                             tpo_spec = broadcast;
                             transaccion.tipo = tpo_spec;
+                        	transaccion.instruccion = instruccion;
                             transaccion.paquete = {transaccion.ID, transaccion.payload};
                             transaccion.destino = transaccion.ID;
                             
@@ -86,6 +89,7 @@ class agente #(parameter width = 16, parameter depth = 8, parameter drivers = 4,
                             transaccion.randomize();
                             tpo_spec = reset;
                             transaccion.tipo = tpo_spec;
+                          	transaccion.instruccion = instruccion;
                             transaccion.paquete = {transaccion.ID, transaccion.payload};
                             transaccion.destino = transaccion.ID;
                           
@@ -112,6 +116,7 @@ class agente #(parameter width = 16, parameter depth = 8, parameter drivers = 4,
                             transaccion.randomize();
                             tpo_spec = envio;
                             transaccion.tipo = tpo_spec;
+                          	transaccion.instruccion = instruccion;
                             transaccion.paquete = {transaccion.ID, transaccion.payload};
                             transaccion.destino = transaccion.ID;
 
@@ -146,6 +151,7 @@ class agente #(parameter width = 16, parameter depth = 8, parameter drivers = 4,
                           transaccion.ID = ID_spec; //Se asigno el ID de broadcast.
                           tpo_spec = broadcast;
                           transaccion.tipo = tpo_spec;
+                          transaccion.instruccion = instruccion;
                           transaccion.paquete = {transaccion.ID, transaccion.payload};
                           transaccion.destino = transaccion.ID;
 
@@ -173,6 +179,7 @@ class agente #(parameter width = 16, parameter depth = 8, parameter drivers = 4,
                           transaccion.randomize();
                           tpo_spec = envio;
                           transaccion.tipo = tpo_spec;
+                          transaccion.instruccion = instruccion;
                           transaccion.paquete = {transaccion.ID, transaccion.payload};
                           transaccion.destino = transaccion.ID;
 
@@ -200,6 +207,7 @@ class agente #(parameter width = 16, parameter depth = 8, parameter drivers = 4,
                             transaccion.randomize();
                             tpo_spec = envio;
                           	transaccion.tipo = tpo_spec;
+                          	transaccion.instruccion = instruccion;
                           	transaccion.paquete = {transaccion.ID_unknown, transaccion.payload}; //Coloco el ID fuera de los rangos
                             transaccion.destino = transaccion.ID_unknown;
                           
@@ -220,4 +228,3 @@ class agente #(parameter width = 16, parameter depth = 8, parameter drivers = 4,
     endtask
     
 endclass
-

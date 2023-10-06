@@ -1,9 +1,6 @@
-// Code your testbench here
-// or browse Examples
-// Code your testbench here
-// or browse Examples
 `timescale 1ns/1ps
-`include "Ambiente.sv"
+
+`include "Test.sv"
 
 module tb_bus_de_datos;
     reg clk;
@@ -14,15 +11,8 @@ module tb_bus_de_datos;
 
 
     //Instruccion
-    trans_bus #(.width(16), .max_drivers(4)) transaccion[3];
-	  int max_retardo = 10;
-	  tipo_trans tipo_spec;
-  
-    ambiente #(.width(width), .depth(depth), .drivers(drivers), .broadcast({8{1'b1}})) prueba;
+  	test #(.width(width), .depth(depth), .drivers(drivers), .broadcast({8{1'b1}})) test_inst;
     FIFOS #(.width(width), .drivers(drivers), .bits(bits)) _FIFOS (.clk(clk));
-  
-  	trans_bus_mbx agente_monitor[drivers];  
-    trans_bus_mbx agente_driver[drivers];
   
   	always #5 clk = ~ clk;
 
@@ -38,104 +28,49 @@ module tb_bus_de_datos;
 
     initial begin
       	$dumpfile("test.vcd");
-      $dumpvars(0, DUT);
+        $dumpvars(0, DUT);
         clk = 0;
-      
-        for (int i = 0; i < drivers ; i++) begin
-          agente_monitor[i]= new();
-          agente_driver[i]= new();
-        end
-      
-      	prueba = new();
-      
-        prueba.agente_monitor	= agente_monitor;
-        prueba.agente_driver	= agente_driver;
-      
 
+      	test_inst = new();
+        
+        test_inst._FIFOS = _FIFOS;
+      
         //Inicializacion de las interfaces
       
       	for (int i = 0; i < drivers; i++)begin
-            prueba.driver_monitor_inst[i].fifo_in = _FIFOS;//Dentro del driver_monitor
-            prueba.driver_monitor_inst[i].fifo_out = _FIFOS;
+            test_inst.ambiente_inst.driver_monitor_inst[i].fifo_in = _FIFOS;//Dentro del driver_monitor
+            test_inst.ambiente_inst.driver_monitor_inst[i].fifo_out = _FIFOS;
           	
         end
      	
-      	prueba._FIFOS = _FIFOS; //Inicializacion de las interfaces
+      	test_inst.ambiente_inst._FIFOS = _FIFOS; //Dentro del ambiente
           
         for (int i = 0; i < drivers; i++)begin
-          prueba.driver_monitor_inst[i].inst_driver.fifo_in = _FIFOS;//Dentro del driver y del monitor
+            test_inst.ambiente_inst.driver_monitor_inst[i].inst_driver.fifo_in = _FIFOS;//Dentro del driver
           
         end
           
         for (int i = 0; i < drivers; i++)begin
-          prueba.driver_monitor_inst[i].inst_monitor.fifo_out = _FIFOS;
+            test_inst.ambiente_inst.driver_monitor_inst[i].inst_monitor.fifo_out = _FIFOS;//Dentro del monitor
 		  
         end 
       	
-      	prueba.if_conexion();
-      	
+        test_inst.ambiente_inst.if_conexion;
       
-        
         fork
-            prueba.run();
+            test_inst.run();
         join_none
   
       
-      	for (int i = 0; i < 1000; i++) begin
+      	for (int i = 0; i < 100; i++) begin
         	@(posedge clk);
-     	end
-      
-      
-      	//Prueba
-      
-      	transaccion[0] = new();
-      	transaccion[0].max_retardo = max_retardo;
-      	transaccion[0].randomize();
-      	tipo_spec = envio;
-      	transaccion[0].tipo = tipo_spec;
-     	  transaccion[0].paquete = {transaccion[0].ID, transaccion[0].payload};
-      	transaccion[0].destino = transaccion[0].ID;
-      
-      
-      	//Necesito conectar desde el agente hasta la instancia especifica del driver y el monitor
-
-        //Meto la transaccion en el driver especifico
-      	prueba.driver_monitor_inst[transaccion[0].driver-1].inst_driver.agente_driver.put(transaccion[0]); //Meto la transaccion en el driver 1
-
-        //Meto la instruccion en el agente de destino
-      	prueba.driver_monitor_inst[transaccion[0].ID].inst_monitor.agente_monitor.put(transaccion[0]);
-      
-      
-      	for (int i = 0; i < 1000; i++) begin
-        	@(posedge clk);
-     	end
+        end
       	
-      
-        transaccion[1] = new();
-        transaccion[1].max_retardo = max_retardo;
-        transaccion[1].randomize();
-      	tipo_spec = envio;
-        transaccion[1].tipo = tipo_spec;
-        transaccion[1].paquete = {transaccion[1].ID, transaccion[1].payload};
-        transaccion[1].destino = transaccion[1].ID;
-      
-      
-      	//Necesito conectar desde el agente hasta la instancia especifica del driver y el monitor
+      	#500000;
+        $display("[%g]  Test: Se alcanza el tiempo límite de la prueba",$time);
+        #20
+        $finish;
 
-        //Meto la transaccion en el driver especifico
-      	prueba.driver_monitor_inst[transaccion[1].driver-1].inst_driver.agente_driver.put(transaccion[1]); //Meto la transaccion en el driver 1
-
-        //Meto la instruccion en el agente de destino
-     	prueba.driver_monitor_inst[transaccion[1].ID].inst_monitor.agente_monitor.put(transaccion[1]);
-      
-      
-      	for (int i = 0; i < 1000; i++) begin
-        	@(posedge clk);
-     	end
-      	
-      	$finish;
-      
-      
 
       
     end 

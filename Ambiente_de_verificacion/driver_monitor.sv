@@ -1,9 +1,9 @@
-
-//Driver/monitor
-`include "interface_transactions.sv"
+`include "Checker.sv"
 class monitor #(parameter width = 16, parameter depth = 8, parameter drivers = 4);
     
   	trans_bus_mbx agente_monitor;
+    trans_bus_mbx monitor_checker;
+  
   	virtual FIFOS #(.width(width), .drivers(drivers), .bits(1)) fifo_out;
 
     bit [width-1:0] cola_out[$]; //Declaracion del queue del monitor que solo almacenas paquetes recibidos
@@ -41,34 +41,43 @@ class monitor #(parameter width = 16, parameter depth = 8, parameter drivers = 4
             
             broadcast: begin		
               
-              	while(fifo_out.push[0][id-1]==0)begin
+              	while(fifo_out.push[0][id]== 0 && transaccion.driver != transaccion.ID)begin
                   	@(posedge fifo_out.clk);
               	end
  
-            	cola_out.push_back(fifo_out.D_push[0][id-1]); //Aqui cuando detecta una señal de push entonces envia el dato.
-              	transaccion.dato_recibido = fifo_out.D_push[0][id-1];
-                $display("FIFO out %d recibio el dato %b ", id, fifo_out.D_push[0][id-1]);
+            	cola_out.push_back(fifo_out.D_push[0][id]); //Aqui cuando detecta una señal de push entonces envia el dato.
+              	transaccion.dato_recibido = fifo_out.D_push[0][id];//Guardo el dato que se recibio
+              	transaccion.monitor_receptor = id - 1;//Seteo el monitor que lo recibio
+				transaccion.tiempo_recibido = $time;
+                monitor_checker.put(transaccion);
+                $display("FIFO out %d recibio el dato %b ", id, fifo_out.D_push[0][id]);
             end
             
-        	envio: begin		
-              	while(fifo_out.push[0][id-1]==0)begin
+        	  envio: begin		
+                while(fifo_out.push[0][id]== 0 && transaccion.driver != transaccion.ID)begin
                   	@(posedge fifo_out.clk);
               	end
  
-            	cola_out.push_back(fifo_out.D_push[0][id-1]); //Aqui cuando detecta una señal de push entonces envia el dato.
-              	transaccion.dato_recibido = fifo_out.D_push[0][id-1];
-                $display("FIFO out %d recibio el dato %b ", id, fifo_out.D_push[0][id-1]);
+            	cola_out.push_back(fifo_out.D_push[0][id]); //Aqui cuando detecta una señal de push entonces envia el dato.
+              	transaccion.dato_recibido = fifo_out.D_push[0][id];
+                transaccion.monitor_receptor = id - 1;
+				transaccion.tiempo_recibido = $time;
+                monitor_checker.put(transaccion);
+                $display("FIFO out %d recibio el dato %b ", id, fifo_out.D_push[0][id]);
             end
           	
           
           	reset: begin		
-              	while(fifo_out.push[0][id-1]==0)begin
+              	while(fifo_out.push[0][id]== 0 && transaccion.driver != transaccion.ID)begin
                   	@(posedge fifo_out.clk);
               	end
  
-            	cola_out.push_back(fifo_out.D_push[0][id-1]); //Aqui cuando detecta una señal de push entonces envia el dato.
-              	transaccion.dato_recibido = fifo_out.D_push[0][id-1];
-              	$display("FIFO out %d recibio el dato %b ", id, fifo_out.D_push[0][id-1]);
+            	cola_out.push_back(fifo_out.D_push[0][id]); //Aqui cuando detecta una señal de push entonces envia el dato.
+              	transaccion.dato_recibido = fifo_out.D_push[0][id];
+              	transaccion.monitor_receptor = id - 1;
+				transaccion.tiempo_recibido = $time;
+                monitor_checker.put(transaccion);
+              	$display("FIFO out %d recibio el dato %b ", id, fifo_out.D_push[0][id]);
             end
             
             default: begin
@@ -101,13 +110,11 @@ class driver #(parameter width = 16, parameter depth = 8, parameter drivers = 4)
     task run();
         $display("[%g] La FIFO de entrada %d fue inicializada",$time, id );
         fifo_in.rst = 1;
-      	fifo_in.pndng[0][id-1] = 0;
-      	fifo_in.D_pop[0][id-1]  ='0;
+      	fifo_in.pndng[0][id] = 0;
+      	fifo_in.D_pop[0][id]  ='0;
       
         forever begin 
             trans_bus #(.width(width), .max_drivers(drivers)) transaccion;
-          
-          
           
           	//Pongo la señal de pending que va a la entrada del dut en 0
           	//fifo_in.D_pop[0][id-1]  ='0;  //Pongo todos los bits del paquete en 0 bits 
@@ -116,15 +123,10 @@ class driver #(parameter width = 16, parameter depth = 8, parameter drivers = 4)
             $display("[%g]El driver %d espera por transaccion", $time, id);
             espera = 0;
           	retardo = 0;
-          
-          	while(agente_driver.num()==0)begin
-              	@(posedge fifo_in.clk);
-              	fifo_in.pndng[0][id-1] = 0;
-            end
-          
+        
+          	
             agente_driver.get(transaccion); //obtengo la transaccion del mailbox
-          	cola_in.push_back(transaccion); //Meto el dato dentro del que
-            transaccion.print_in("Driver: Transaccion recibida");
+          	transaccion.print_in("Driver: Transaccion recibida");
             $display("Transacciones pendientes en el mailbox agente_driver %d = %g",id,agente_driver.num());
             
           	while(espera < transaccion.retardo)begin //Hago un retardo/////////
@@ -132,36 +134,44 @@ class driver #(parameter width = 16, parameter depth = 8, parameter drivers = 4)
                 espera = espera + 1;
             end
           
+          	if(agente_driver.num()==0)begin
+              	fifo_in.pndng[0][id] = 0;
+            end else begin
+              	fifo_in.pndng[0][id] = 1;
+            end
+          
+			transaccion.tiempo_envio = $time; //Le pongo el tiempo en el que se envio
+          	cola_in.push_back(transaccion); //Meto el dato dentro del que
+          
             
             case(transaccion.tipo)
               	broadcast: begin
-                  	$display("entro");
-   					fifo_in.D_pop[0][id-1] = cola_in.pop_front.paquete;
-                    fifo_in.pndng[0][id-1] = 1;
+   					fifo_in.D_pop[0][id] = cola_in.pop_front.paquete;
+                    fifo_in.pndng[0][id] = 1;
                   	@(posedge fifo_in.clk);
                   	@(posedge fifo_in.clk);
                   	@(posedge fifo_in.clk);
-                  	fifo_in.D_pop[0][id-1] = '0;
-                  	fifo_in.pndng[0][id-1] = 0;
+                  	fifo_in.D_pop[0][id] = '0;
+                  	fifo_in.pndng[0][id] = 0;
                 end
               	envio: begin
-        			fifo_in.D_pop[0][id-1] = cola_in.pop_front.paquete;
-                    fifo_in.pndng[0][id-1] = 1;
-                  	@(posedge fifo_in.clk);
-                  	@(posedge fifo_in.clk);
-                  	@(posedge fifo_in.clk);
-                  	fifo_in.D_pop[0][id-1] = '0;
-                  	fifo_in.pndng[0][id-1] = 0;
-                end
+                  $display("Entro driver %d", id);
+                  while(fifo_in.pop[0][id] == 0)begin
+                    @(posedge fifo_in.clk);
+                  end
+                  
+        			fifo_in.D_pop[0][id] = cola_in.pop_front.paquete;
+                  
+                  end
               
               	reset: begin
-                  	fifo_in.D_pop[0][id-1] = cola_in.pop_front.paquete;
-                    fifo_in.pndng[0][id-1] = 1;
+                  	fifo_in.D_pop[0][id] = cola_in.pop_front.paquete;
+                    fifo_in.pndng[0][id] = 1;
                   	@(posedge fifo_in.clk);
                   	@(posedge fifo_in.clk);
                   	@(posedge fifo_in.clk);
-                  	fifo_in.D_pop[0][id-1] = '0;
-                  	fifo_in.pndng[0][id-1] = 0;
+                  	fifo_in.D_pop[0][id] = '0;
+                  	fifo_in.pndng[0][id] = 0;
                   	@(posedge fifo_in.clk);
                   	@(posedge fifo_in.clk);
     
