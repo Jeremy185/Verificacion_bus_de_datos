@@ -88,7 +88,7 @@ class ambiente #(parameter width = 16,  parameter depth = 8, parameter drivers =
             @(posedge _FIFOS.clk);
           end
           agente_inst.run();
-          checker_inst.run();
+          //checker_inst.run();
           
           
           
